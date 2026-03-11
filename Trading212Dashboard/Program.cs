@@ -36,6 +36,9 @@ builder.Services.AddHttpClient<Trading212Client>(client =>
 builder.Services.AddCors(options =>
     options.AddDefaultPolicy(policy => policy.AllowAnyOrigin().AllowAnyHeader().AllowAnyMethod()));
 
+// Initialize alert config from appsettings.json
+AlertConfigLoader.Load(builder.Configuration);
+
 var app = builder.Build();
 
 app.UseCors();

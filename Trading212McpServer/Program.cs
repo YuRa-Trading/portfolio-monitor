@@ -41,5 +41,8 @@ builder.Services
     .WithStdioServerTransport()
     .WithToolsFromAssembly();
 
+// Initialize alert config from appsettings.json (cached for tool calls)
+Trading212McpServer.Config.AlertConfigLoader.Load(builder.Configuration);
+
 var app = builder.Build();
 await app.RunAsync();

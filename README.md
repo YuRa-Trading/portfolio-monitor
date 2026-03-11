@@ -19,6 +19,30 @@
 
 ---
 
+## Screenshots
+
+### Positions & Alerts
+<p align="center">
+  <img src="docs/Positions.jpeg" alt="Positions view with risk alerts" width="900" />
+</p>
+
+### Analytics
+<p align="center">
+  <img src="docs/Analytics.jpeg" alt="Analytics with charts, breakdowns, and performance metrics" width="900" />
+</p>
+
+### Orders
+<p align="center">
+  <img src="docs/Orders.jpeg" alt="Order history" width="900" />
+</p>
+
+### News
+<p align="center">
+  <img src="docs/News.jpeg" alt="Filtered news feed" width="900" />
+</p>
+
+---
+
 ## What's Inside
 
 ### Trading212McpServer
@@ -228,14 +252,33 @@ This project wraps the [Trading 212 Public API](https://docs.trading212.com/api)
 
 ## Alert Configuration
 
-Alerts are generated based on configurable thresholds. On first run, an `alerts.json` file is created with defaults:
+Alerts are configured in `appsettings.json` under the `"Alerts"` section. Default thresholds:
 
-- **Drawdown alert** — when a position drops more than 15%
-- **Concentration alert** — when a single position exceeds 25% of portfolio
-- **Position size alert** — when a position is under £1,500
-- **Position count alert** — when you exceed 16 positions
+- **Drawdown alert** — position drops more than 20%
+- **Concentration alert** — single position exceeds 30% of portfolio
+- **Position size alert** — position is under £500
+- **Position count alert** — more than 30 positions
 
-Edit `alerts.json` (in the binary output directory) to customize thresholds and news keywords.
+To personalise without modifying the committed defaults, create an `appsettings.Development.json` in either project (this file is git-ignored):
+
+```json
+{
+  "Alerts": {
+    "Portfolio": {
+      "MaxDrawdownPercent": 15,
+      "MaxConcentrationPercent": 25,
+      "MinPositionSize": 1500,
+      "MaxPositions": 16
+    },
+    "NewsKeywords": [
+      "Iran", "OPEC", "oil price", "gold price",
+      "Rolls-Royce", "BP", "defence spending"
+    ]
+  }
+}
+```
+
+Only include the sections you want to override — the rest falls back to `appsettings.json` defaults.
 
 ## Tech Stack
 
