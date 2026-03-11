@@ -1,0 +1,16 @@
+<div class="doughnut-wrap">
+  <div class="doughnut-canvas-wrap">
+    <canvas #chartCanvas></canvas>
+  </div>
+  @if (legendItems().length > 0) {
+    <div class="doughnut-legend">
+      @for (item of legendItems(); track item.label) {
+        <div class="legend-item">
+          <span class="legend-dot" [style.background]="item.color"></span>
+          <span class="legend-label">{{ item.label }}</span>
+          <span class="legend-value mono">{{ item.pct | number:'1.1-1' }}%</span>
+        </div>
+      }
+    </div>
+  }
+</div>

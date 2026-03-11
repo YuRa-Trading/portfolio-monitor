@@ -1,0 +1,159 @@
+<button class="detail-back" (click)="goBack()">&larr; Back to Positions</button>
+
+@if (loading()) {
+  <div class="detail-header">
+    <div class="loading-skeleton loading-pulse" style="width: 200px; height: 1.6rem;"></div>
+    <div class="loading-skeleton loading-pulse" style="width: 120px; height: 1rem; margin-top: 0.5rem;"></div>
+  </div>
+  <div class="detail-stats">
+    @for (_ of [1,2,3,4]; track $index) {
+      <div class="detail-stat">
+        <div class="loading-skeleton loading-pulse" style="width: 80px; height: 0.75rem;"></div>
+        <div class="loading-skeleton loading-pulse" style="width: 120px; height: 1.5rem; margin-top: 0.5rem;"></div>
+      </div>
+    }
+  </div>
+} @else if (error()) {
+  <div class="section-error">{{ error() }}</div>
+} @else {
+  @if (detail(); as d) {
+  <div class="detail-header fade-up">
+    <div>
+      <span class="detail-title">{{ d.ticker.split('_')[0] }}</span>
+      <span class="detail-exchange">{{ d.exchange }}</span>
+    </div>
+    <div class="detail-subtitle">{{ d.name }} &middot; {{ d.currency }} &middot; {{ d.isin }}</div>
+  </div>
+
+  <!-- Key Stats -->
+  <div class="detail-stats fade-up">
+    <div class="detail-stat">
+      <span class="detail-stat-label">Current Value</span>
+      <span class="detail-stat-value">{{ d.currentValue | formatGbp }}</span>
+      <span class="detail-stat-sub">{{ d.quantity }} shares</span>
+    </div>
+    <div class="detail-stat" [class.pos-green]="d.profitLoss >= 0" [class.pos-red]="d.profitLoss < 0">
+      <span class="detail-stat-label">Unrealised P&amp;L</span>
+      <span class="detail-stat-value">{{ d.profitLoss | formatGbp }}</span>
+      <span class="detail-stat-sub">{{ d.profitLossPercent | formatPct }}</span>
+    </div>
+    <div class="detail-stat">
+      <span class="detail-stat-label">Total Return</span>
+      <span class="detail-stat-value">{{ d.totalReturn | formatGbp }}</span>
+      <span class="detail-stat-sub">incl. dividends</span>
+    </div>
+    <div class="detail-stat">
+      <span class="detail-stat-label">Invested</span>
+      <span class="detail-stat-value">{{ d.investedValue | formatGbp }}</span>
+      <span class="detail-stat-sub">{{ d.weight.toFixed(1) }}% of portfolio</span>
+    </div>
+  </div>
+
+  <!-- Info Cards -->
+  <div class="detail-info-grid fade-up">
+    <div class="detail-info-card">
+      <div class="detail-section-title">Price Info</div>
+      <div class="detail-info-row">
+        <span class="detail-info-label">Avg Price</span>
+        <span class="detail-info-value">{{ formatPrice(d.averagePrice, d.currency) }}</span>
+      </div>
+      <div class="detail-info-row">
+        <span class="detail-info-label">Current Price</span>
+        <span class="detail-info-value">{{ formatPrice(d.currentPrice, d.currency) }}</span>
+      </div>
+      <div class="detail-info-row">
+        <span class="detail-info-label">Price Change</span>
+        <span class="detail-info-value" [class.pos-green]="priceChange(d) >= 0" [class.pos-red]="priceChange(d) < 0">
+          {{ priceChange(d) | formatPct }}
+        </span>
+      </div>
+      <div class="detail-info-row">
+        <span class="detail-info-label">FX Impact</span>
+        <span class="detail-info-value">
+          @if (d.fxImpact != null) {
+            {{ d.fxImpact | formatGbp }}
+          } @else {
+            &mdash;
+          }
+        </span>
+      </div>
+    </div>
+
+    <div class="detail-info-card">
+      <div class="detail-section-title">Holding Info</div>
+      <div class="detail-info-row">
+        <span class="detail-info-label">Bought Date</span>
+        <span class="detail-info-value">{{ d.boughtAt }}</span>
+      </div>
+      <div class="detail-info-row">
+        <span class="detail-info-label">Holding Period</span>
+        <span class="detail-info-value">{{ formatHoldingPeriod(d.holdingDays) }}</span>
+      </div>
+      <div class="detail-info-row">
+        <span class="detail-info-label">Daily P&amp;L Avg</span>
+        <span class="detail-info-value">{{ dailyPLAvg(d) | formatGbp }}</span>
+      </div>
+      <div class="detail-info-row">
+        <span class="detail-info-label">Total Bought</span>
+        <span class="detail-info-value">{{ d.totalBought | formatGbp }}</span>
+      </div>
+      <div class="detail-info-row">
+        <span class="detail-info-label">Total Sold</span>
+        <span class="detail-info-value">{{ d.totalSold | formatGbp }}</span>
+      </div>
+    </div>
+  </div>
+
+  <!-- Order History -->
+  @if (d.orders.length > 0) {
+    <div class="detail-section fade-up">
+      <div class="detail-section-title">Order History ({{ d.orderCount }})</div>
+      <div class="order-header">
+        <span>DATE</span>
+        <span>SIDE</span>
+        <span>QTY</span>
+        <span>PRICE</span>
+        <span>NET VALUE</span>
+        <span>REALISED P&amp;L</span>
+      </div>
+      @for (o of d.orders; track o.id) {
+        <div class="order-row">
+          <span>{{ o.date }}</span>
+          <span class="order-type" [class.pos-green]="o.side === 'Buy'" [class.pos-red]="o.side === 'Sell'">{{ o.side }}</span>
+          <span>{{ o.quantity }}</span>
+          <span>{{ formatPrice(o.fillPrice, d.currency) }}</span>
+          <span>{{ o.netValue | formatGbp }}</span>
+          <span [class.pos-green]="(o.realisedPL ?? 0) > 0" [class.pos-red]="(o.realisedPL ?? 0) < 0">
+            @if (o.realisedPL != null) {
+              {{ o.realisedPL | formatGbp }}
+            } @else {
+              &mdash;
+            }
+          </span>
+        </div>
+      }
+    </div>
+  }
+
+  <!-- Dividend History -->
+  @if (d.dividends.length > 0) {
+    <div class="detail-section fade-up">
+      <div class="detail-section-title">Dividend History ({{ d.dividendCount }})</div>
+      @for (div of d.dividends; track div.paidOn + div.amount) {
+        <div class="div-row">
+          <span>{{ div.paidOn }}</span>
+          <span>{{ div.type }}</span>
+          <span>{{ div.quantity }} shares</span>
+          <span class="pos-green">{{ div.amount | formatGbp }}</span>
+        </div>
+      }
+      <div class="div-row total-row">
+        <span>TOTAL DIVIDENDS</span>
+        <span></span>
+        <span></span>
+        <span class="pos-green">{{ d.totalDividends | formatGbp }}</span>
+      </div>
+    </div>
+  }
+  }
+}

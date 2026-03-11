@@ -1,0 +1,18 @@
+@if (sorted().length) {
+  @for (item of sorted(); track item.link) {
+    <a class="news-card fade-up"
+       [href]="item.link"
+       target="_blank"
+       rel="noopener noreferrer">
+      <div class="news-top">
+        <span class="news-title">{{ item.title }}</span>
+        <span class="news-dots">{{ relevanceDots(item.relevance) }}</span>
+      </div>
+      <div class="news-meta">
+        {{ item.source }} &middot; {{ timeAgo(item.date) }}
+      </div>
+    </a>
+  }
+} @else {
+  <p class="news-empty">No relevant news in the last 48 hours.</p>
+}

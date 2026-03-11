@@ -1,0 +1,19 @@
+<svg width="280" height="70" viewBox="0 0 280 70" xmlns="http://www.w3.org/2000/svg">
+  <defs>
+    <linearGradient id="d-line" x1="0" y1="0" x2="75" y2="0" gradientUnits="userSpaceOnUse">
+      <stop offset="0%" stop-color="#00ff88"/><stop offset="100%" stop-color="#00e5ff"/>
+    </linearGradient>
+    <linearGradient id="d-ra" x1="0" y1="0" x2="1" y2="0">
+      <stop offset="0%" stop-color="#00e5ff"/><stop offset="100%" stop-color="#00ffcc"/>
+    </linearGradient>
+    <filter id="glow"><feGaussianBlur stdDeviation="3" result="b"/><feMerge><feMergeNode in="b"/><feMergeNode in="SourceGraphic"/></feMerge></filter>
+    <filter id="tglow"><feGaussianBlur stdDeviation="4" result="b"/><feMerge><feMergeNode in="b"/><feMergeNode in="SourceGraphic"/></feMerge></filter>
+  </defs>
+  <polyline points="8,48 22,40 36,44 50,28 64,22 78,12" stroke="url(#d-line)" stroke-width="3.5" fill="none" stroke-linecap="round" stroke-linejoin="round" filter="url(#glow)"/>
+  <circle cx="50" cy="28" r="3.5" fill="#00ff88"/><circle cx="78" cy="12" r="4" fill="#00e5ff"/>
+  <line x1="92" y1="12" x2="92" y2="58" stroke="#00e5ff" stroke-width="1" opacity="0.3"/>
+  <text x="104" y="42" font-family="'Courier New',monospace" font-size="38" font-weight="bold" fill="#ffffff" letter-spacing="-1">Yu</text>
+  <text x="152" y="42" font-family="'Courier New',monospace" font-size="38" font-weight="bold" fill="url(#d-ra)" letter-spacing="-1" filter="url(#tglow)">Ra</text>
+  <line x1="104" y1="46" x2="200" y2="46" stroke="url(#d-line)" stroke-width="1" opacity="0.4"/>
+  <text x="104" y="58" font-family="'Courier New',monospace" font-size="10" fill="#4a5568" letter-spacing="6">TRADING</text>
+</svg>

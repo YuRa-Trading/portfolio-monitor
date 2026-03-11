@@ -1,0 +1,66 @@
+# =========================
+# .NET
+# =========================
+bin/
+obj/
+*.user
+*.suo
+*.userosscache
+*.sln.docstates
+**/Properties/launchSettings.json
+
+# NuGet
+*.nupkg
+.nuget/
+project.lock.json
+
+# =========================
+# Angular / Node
+# =========================
+node_modules/
+dist/
+tmp/
+out-tsc/
+.angular/
+
+# =========================
+# Build output
+# =========================
+wwwroot/
+
+# =========================
+# IDE
+# =========================
+.idea/
+.vs/
+*.swp
+*.swo
+*~
+
+# =========================
+# Environment & secrets
+# =========================
+.env
+.env.local
+.env.*.local
+appsettings.Development.json
+
+# =========================
+# Runtime data
+# =========================
+portfolio-snapshots.json
+alerts.json
+
+# =========================
+# OS
+# =========================
+.DS_Store
+Thumbs.db
+Desktop.ini
+
+# =========================
+# Logs
+# =========================
+*.log
+npm-debug.log*
+yarn-error.log

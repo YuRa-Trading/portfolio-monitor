@@ -1,0 +1,13 @@
+<div class="line-chart-wrap">
+  <div class="chart-container" style="max-height:300px"><canvas #chartCanvas></canvas></div>
+  @if (legendItems().length > 1) {
+    <div class="line-legend">
+      @for (item of legendItems(); track item.label) {
+        <div class="line-legend-item">
+          <span class="line-legend-swatch" [style.background]="item.color"></span>
+          <span class="line-legend-label">{{ item.label }}</span>
+        </div>
+      }
+    </div>
+  }
+</div>

@@ -1,0 +1,236 @@
+<!-- ═══ Section: Charts ═══ -->
+@if (snapshots()?.snapshots?.length! > 1) {
+  <div class="analytics-card fade-up">
+    <h3 class="analytics-title">Portfolio Value Over Time <span class="mono">({{ snapshots()!.snapshots.length }} snapshots)</span></h3>
+    <app-line-chart
+      [data]="snapshots()!.snapshots"
+      labelKey="date"
+      [valueKeys]="['totalValue', 'invested']"
+      [colors]="['green', 'cyan']"
+      [labels]="['Total Value', 'Invested']"
+    />
+  </div>
+}
+
+@if (benchmarkMergedData().length > 0) {
+  <div class="analytics-card fade-up">
+    <h3 class="analytics-title">Benchmark Comparison</h3>
+    <app-line-chart
+      [data]="benchmarkMergedData()"
+      labelKey="date"
+      [valueKeys]="benchmarkValueKeys()"
+      [colors]="benchmarkColors()"
+      [labels]="benchmarkLabels()"
+      yPrefix="%"
+    />
+  </div>
+}
+
+<!-- ═══ Section: Breakdowns ═══ -->
+@if (data()) {
+  <h4 class="section-heading fade-up">Breakdowns</h4>
+  <div class="doughnut-grid fade-up">
+    <div class="analytics-card">
+      <h3 class="analytics-title">Exchange</h3>
+      <app-doughnut-chart [data]="data()!.byExchange" labelKey="region" />
+    </div>
+    <div class="analytics-card">
+      <h3 class="analytics-title">Currency</h3>
+      <app-doughnut-chart [data]="data()!.byCurrency" labelKey="currency" />
+    </div>
+    @if (data()!.byType?.length! > 0) {
+      <div class="analytics-card">
+        <h3 class="analytics-title">Asset Type</h3>
+        <app-doughnut-chart [data]="data()!.byType" labelKey="type" />
+      </div>
+    }
+    @if (positions()?.length! > 0) {
+      <div class="analytics-card">
+        <h3 class="analytics-title">Position Weight</h3>
+        <app-doughnut-chart [data]="positionWeightData()" labelKey="label" />
+      </div>
+    }
+  </div>
+}
+
+<!-- ═══ Section: Type Details (bar breakdown) ═══ -->
+@if (data()?.byType?.length! > 0) {
+  <div class="analytics-card fade-up">
+    <h3 class="analytics-title">Type Details</h3>
+    @for (item of data()!.byType; track item.type) {
+      <div class="breakdown-row">
+        <span class="breakdown-label">{{ item.type }}</span>
+        <div class="breakdown-bar-wrap">
+          <div class="breakdown-bar" [style.width.%]="item.pct"></div>
+        </div>
+        <span class="breakdown-val mono">
+          {{ item.value | formatGbp }} &middot; {{ item.pct | formatPct }} &middot; {{ item.count }}
+        </span>
+      </div>
+    }
+  </div>
+}
+
+<!-- ═══ Section: Performance ═══ -->
+@if (data()?.best3?.length || data()?.worst3?.length) {
+  <h4 class="section-heading fade-up">Performance</h4>
+  <div class="two-col fade-up">
+    <div class="analytics-card">
+      <h3 class="analytics-title">Best Performers</h3>
+      @for (item of data()!.best3; track item.ticker) {
+        <div class="perf-row">
+          <span class="perf-ticker mono">{{ item.ticker | shortTicker }}</span>
+          <span class="perf-name">{{ truncate(item.name, 20) }}</span>
+          <span class="perf-val pos-green mono">{{ item.plPct | formatPct }}</span>
+          <span class="perf-val pos-green mono">{{ item.profitLoss | formatGbp }}</span>
+        </div>
+      }
+    </div>
+    <div class="analytics-card">
+      <h3 class="analytics-title">Worst Performers</h3>
+      @for (item of data()!.worst3; track item.ticker) {
+        <div class="perf-row">
+          <span class="perf-ticker mono">{{ item.ticker | shortTicker }}</span>
+          <span class="perf-name">{{ truncate(item.name, 20) }}</span>
+          <span class="perf-val pos-red mono">{{ item.plPct | formatPct }}</span>
+          <span class="perf-val pos-red mono">{{ item.profitLoss | formatGbp }}</span>
+        </div>
+      }
+    </div>
+  </div>
+}
+
+<!-- Top 3 Concentration -->
+@if (data()?.top3?.length) {
+  <div class="analytics-card fade-up">
+    <h3 class="analytics-title">Top 3 Concentration <span class="mono">({{ data()!.top3Pct | formatPct }})</span></h3>
+    @for (item of data()!.top3; track item.ticker) {
+      <div class="breakdown-row">
+        <span class="breakdown-label mono">{{ item.ticker | shortTicker }}</span>
+        <div class="breakdown-bar-wrap">
+          <div class="breakdown-bar" [style.width.%]="item.weight"></div>
+        </div>
+        <span class="breakdown-val mono">{{ item.currentValue | formatGbp }} &middot; {{ item.weight | formatPct }}</span>
+      </div>
+    }
+  </div>
+}
+
+<!-- P&L + Invested vs Current -->
+@if (data()?.comparison?.length) {
+  <div class="two-col fade-up">
+    <div class="analytics-card">
+      <h3 class="analytics-title">P&L by Position</h3>
+      <app-pl-bar-chart [data]="data()!.comparison" />
+    </div>
+    <div class="analytics-card">
+      <h3 class="analytics-title">Invested vs Current</h3>
+      <app-bar-chart [data]="data()!.comparison" />
+    </div>
+  </div>
+}
+
+<!-- ═══ Section: Income ═══ -->
+@if (divCalendar()?.items?.length! > 0 || dividends()?.items?.length! > 0 || interest()?.items?.length! > 0) {
+  <h4 class="section-heading fade-up">Income</h4>
+}
+
+@if (divCalendar()?.items?.length! > 0) {
+  <div class="analytics-card fade-up">
+    <h3 class="analytics-title">Dividend Calendar <span class="mono">({{ projectedAnnualDividends() | formatGbp }} projected annual)</span></h3>
+    <div class="cal-row cal-header mono">
+      <span>STATUS</span>
+      <span>TICKER</span>
+      <span>FREQ</span>
+      <span>LAST</span>
+      <span>NEXT (est)</span>
+      <span>ANN.</span>
+    </div>
+    @for (item of sortedCalendarItems(); track item.ticker) {
+      <div class="cal-row">
+        <span><span class="cal-badge" [class]="calendarBadge(item)">{{ calendarBadgeLabel(item) }}</span></span>
+        <span class="mono">{{ item.symbol || (item.ticker | shortTicker) }}</span>
+        <span>{{ item.frequency }}</span>
+        <span class="mono">{{ item.lastPayment }}</span>
+        <span class="mono">{{ item.nextExpected }}</span>
+        <span class="mono">{{ item.projectedAnnual | formatGbp }}</span>
+      </div>
+    }
+  </div>
+}
+
+@if (dividends()?.items?.length! > 0 || interest()?.items?.length! > 0) {
+  <div class="two-col fade-up">
+    @if (dividends()?.items?.length! > 0) {
+      <div class="analytics-card">
+        <h3 class="analytics-title">Recent Dividends <span class="mono">({{ dividends()!.totalIncome | formatGbp }} total)</span></h3>
+        @for (item of dividends()!.items.slice(0, 10); track $index) {
+          <div class="div-row mono">
+            <span>{{ item.paidOn }}</span>
+            <span>{{ item.ticker | shortTicker }}</span>
+            <span>{{ item.amount | formatGbp }}</span>
+            <span>{{ item.type }}</span>
+          </div>
+        }
+        <div class="div-row total-row mono">
+          <span>Total</span>
+          <span></span>
+          <span>{{ dividends()!.totalIncome | formatGbp }}</span>
+          <span></span>
+        </div>
+      </div>
+    }
+
+    @if (interest()?.items?.length! > 0) {
+      <div class="analytics-card">
+        <h3 class="analytics-title">
+          Cash Interest
+          <span class="mono">({{ interest()!.dailyAverage | formatGbp }}/day &middot; {{ interest()!.projectedAnnual | formatGbp }}/yr)</span>
+        </h3>
+
+        @if (interest()!.byMonth?.length) {
+          <div class="interest-months">
+            @for (m of interest()!.byMonth; track m.month) {
+              <div class="breakdown-row">
+                <span class="breakdown-label mono">{{ m.month }}</span>
+                <div class="breakdown-bar-wrap">
+                  <div class="breakdown-bar" [style.width.%]="(m.total / interest()!.byMonth[0].total) * 100"></div>
+                </div>
+                <span class="breakdown-val mono">{{ m.total | formatGbp }}</span>
+              </div>
+            }
+          </div>
+        }
+
+        @for (item of interest()!.items.slice(0, 10); track $index) {
+          <div class="div-row mono">
+            <span>{{ item.date }}</span>
+            <span>{{ item.currency }}</span>
+            <span>{{ item.amount | formatGbp }}</span>
+            <span></span>
+          </div>
+        }
+        <div class="div-row total-row mono">
+          <span>Total</span>
+          <span></span>
+          <span>{{ interest()!.totalInterest | formatGbp }}</span>
+          <span></span>
+        </div>
+      </div>
+    }
+  </div>
+}
+
+<!-- ═══ Small Positions ═══ -->
+@if (data()?.small?.length! > 0) {
+  <div class="analytics-card fade-up">
+    <h3 class="analytics-title">Small Positions <span class="mono">(&lt; {{ data()!.smallThreshold | formatGbp }})</span></h3>
+    @for (item of data()!.small; track item.ticker) {
+      <div class="small-row">
+        <span class="mono">{{ item.ticker | shortTicker }}</span>
+        <span>{{ truncate(item.name, 20) }}</span>
+        <span class="mono">{{ item.currentValue | formatGbp }}</span>
+      </div>
+    }
+  </div>
+}

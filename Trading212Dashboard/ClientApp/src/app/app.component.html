@@ -1,0 +1,46 @@
+<router-outlet style="display:none" />
+
+<div class="app">
+  <app-header [lastUpdate]="toDate((portfolio$ | async)?.timestamp)" [theme]="theme" (onRefresh)="api.refreshAll()"/>
+
+  <app-stat-cards [portfolio]="(portfolio$ | async)"/>
+
+  <app-alerts-banner [alerts]="(alerts$ | async)"/>
+
+  <!-- Tabs -->
+  <nav class="tabs">
+    <a routerLink="/positions" class="tab-btn" [class.active]="activeTab() === 'positions'">Positions</a>
+    <a routerLink="/analytics" class="tab-btn" routerLinkActive="active">Analytics</a>
+    <a routerLink="/orders" class="tab-btn" routerLinkActive="active">Orders</a>
+    <a routerLink="/news" class="tab-btn" routerLinkActive="active">News</a>
+  </nav>
+
+  <!-- Tab content -->
+  @if (activeTab() === 'positions') {
+    @if (selectedTicker(); as ticker) {
+      <app-position-detail [ticker]="ticker" (onBack)="backToPositions()"/>
+    } @else {
+      <app-positions [positions]="(portfolio$ | async)?.positions ?? null" (onSelect)="selectTicker($event)"/>
+    }
+  }
+  @if (activeTab() === 'analytics') {
+    <app-analytics
+      [data]="(analytics$ | async)"
+      [dividends]="(dividends$ | async)"
+      [interest]="(interest$ | async)"
+      [snapshots]="(snapshots$ | async)"
+      [divCalendar]="(divCalendar$ | async)"
+      [benchmark]="(benchmark$ | async)"
+      [positions]="(portfolio$ | async)?.positions ?? null"/>
+  }
+  @if (activeTab() === 'orders') {
+    <app-orders [orders]="(orders$ | async)"/>
+  }
+  @if (activeTab() === 'news') {
+    <app-news-feed [news]="(news$ | async)"/>
+  }
+
+  <div class="footer mono">
+    YuRa Trading Portfolio Monitor &middot; yuratrading.com &middot; Not financial advice
+  </div>
+</div>

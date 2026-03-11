@@ -1,0 +1,132 @@
+.search-bar {
+  margin-bottom: 0.75rem;
+}
+
+.search-input {
+  width: 100%;
+  padding: 0.5rem 0.75rem;
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  background: var(--surface);
+  color: inherit;
+  font-size: 0.85rem;
+  outline: none;
+  transition: border-color 0.2s;
+
+  &::placeholder {
+    opacity: 0.5;
+  }
+
+  &:focus {
+    border-color: #3b82f6;
+  }
+}
+
+.order-header,
+.order-row {
+  display: grid;
+  grid-template-columns: 0.6fr 1.2fr 0.5fr 0.6fr 0.7fr 0.7fr 0.7fr;
+  align-items: center;
+  padding: 0.45rem 0.75rem;
+  font-size: 0.8rem;
+}
+
+.order-header {
+  font-size: 0.7rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  opacity: 0.6;
+  border-bottom: 1px solid var(--border);
+  padding-bottom: 0.5rem;
+  margin-bottom: 0.25rem;
+
+  &.sortable span {
+    cursor: pointer;
+    user-select: none;
+    transition: opacity 0.15s;
+
+    &:hover {
+      opacity: 1;
+    }
+  }
+}
+
+.order-row {
+  border-bottom: 1px solid var(--border);
+  transition: background 0.15s;
+
+  &:hover {
+    background: var(--hover);
+  }
+
+  &:last-child {
+    border-bottom: none;
+  }
+
+  small {
+    display: block;
+    font-size: 0.7rem;
+    opacity: 0.55;
+  }
+}
+
+.total-row {
+  font-weight: 700;
+  border-top: 2px solid var(--border);
+  border-bottom: none;
+  margin-top: 0.25rem;
+  padding-top: 0.6rem;
+}
+
+.order-type {
+  display: inline-block;
+  padding: 0.1rem 0.45rem;
+  border-radius: 4px;
+  font-size: 0.65rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+
+  &.BUY {
+    background: rgba(34, 197, 94, 0.15);
+    color: #22c55e;
+  }
+
+  &.SELL {
+    background: rgba(239, 68, 68, 0.15);
+    color: #ef4444;
+  }
+}
+
+.pos-right {
+  text-align: right;
+}
+
+.pos-green {
+  color: #22c55e;
+}
+
+.pos-red {
+  color: #ef4444;
+}
+
+.mono {
+  font-family: 'JetBrains Mono', 'Fira Code', monospace;
+}
+
+.empty {
+  text-align: center;
+  opacity: 0.5;
+  padding: 2rem 0;
+  font-size: 0.9rem;
+}
+
+@media (max-width: 768px) {
+  .order-header,
+  .order-row {
+    grid-template-columns: 0.7fr 1fr 0.5fr 0.6fr 0.7fr 0.7fr 0.7fr;
+    font-size: 0.72rem;
+    padding: 0.35rem 0.5rem;
+  }
+}

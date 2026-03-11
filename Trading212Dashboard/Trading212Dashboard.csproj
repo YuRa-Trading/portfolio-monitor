@@ -1,0 +1,20 @@
+<Project Sdk="Microsoft.NET.Sdk.Web">
+
+  <PropertyGroup>
+    <TargetFramework>net10.0</TargetFramework>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <Nullable>enable</Nullable>
+    <RootNamespace>Trading212McpServer</RootNamespace>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <Compile Include="..\Trading212McpServer\Trading212Client.cs" Link="Trading212Client.cs" />
+    <Compile Include="..\Trading212McpServer\Models\Trading212Models.cs" Link="Models\Trading212Models.cs" />
+    <Compile Include="..\Trading212McpServer\Config\AlertConfig.cs" Link="Config\AlertConfig.cs" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <PackageReference Include="System.ServiceModel.Syndication" Version="10.0.0" />
+  </ItemGroup>
+
+</Project>

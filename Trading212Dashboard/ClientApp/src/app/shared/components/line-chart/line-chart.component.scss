@@ -1,0 +1,30 @@
+.line-chart-wrap {
+  position: relative;
+}
+
+.line-legend {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px 16px;
+  justify-content: center;
+  margin-top: 10px;
+}
+
+.line-legend-item {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 0.72rem;
+}
+
+.line-legend-swatch {
+  width: 18px;
+  height: 3px;
+  border-radius: 2px;
+  flex-shrink: 0;
+}
+
+.line-legend-label {
+  color: var(--muted);
+  font-weight: 500;
+}

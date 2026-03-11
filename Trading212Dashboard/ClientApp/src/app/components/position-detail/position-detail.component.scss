@@ -1,0 +1,256 @@
+.detail-back {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.3rem;
+  background: none;
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  padding: 0.4rem 0.8rem;
+  font-size: 0.8rem;
+  color: inherit;
+  cursor: pointer;
+  margin-bottom: 1.25rem;
+  transition: background 0.2s;
+
+  &:hover {
+    background: var(--hover, rgba(255, 255, 255, 0.04));
+  }
+}
+
+.detail-header {
+  margin-bottom: 1.5rem;
+}
+
+.detail-title {
+  font-size: 1.5rem;
+  font-weight: 800;
+  font-family: 'JetBrains Mono', 'Fira Code', monospace;
+  margin-right: 0.5rem;
+}
+
+.detail-exchange {
+  font-size: 0.75rem;
+  font-weight: 600;
+  opacity: 0.5;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  vertical-align: middle;
+}
+
+.detail-subtitle {
+  font-size: 0.8rem;
+  opacity: 0.6;
+  margin-top: 0.3rem;
+}
+
+// Key stats grid
+.detail-stats {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 1rem;
+  margin-bottom: 1.5rem;
+}
+
+.detail-stat {
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+  padding: 1rem 1.25rem;
+  border-radius: 8px;
+  background: var(--surface);
+  border: 1px solid var(--border);
+}
+
+.detail-stat-label {
+  font-size: 0.7rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  opacity: 0.6;
+}
+
+.detail-stat-value {
+  font-size: 1.3rem;
+  font-weight: 700;
+  font-family: 'JetBrains Mono', 'Fira Code', monospace;
+}
+
+.detail-stat-sub {
+  font-size: 0.75rem;
+  opacity: 0.6;
+}
+
+// Info cards
+.detail-info-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 1rem;
+  margin-bottom: 1.5rem;
+}
+
+.detail-info-card {
+  padding: 1rem 1.25rem;
+  border-radius: 8px;
+  background: var(--surface);
+  border: 1px solid var(--border);
+}
+
+.detail-info-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 0.4rem 0;
+  border-bottom: 1px solid var(--border);
+
+  &:last-child {
+    border-bottom: none;
+  }
+}
+
+.detail-info-label {
+  font-size: 0.8rem;
+  opacity: 0.6;
+}
+
+.detail-info-value {
+  font-size: 0.85rem;
+  font-weight: 600;
+  font-family: 'JetBrains Mono', 'Fira Code', monospace;
+}
+
+// Sections
+.detail-section {
+  margin-bottom: 1.5rem;
+}
+
+.detail-section-title {
+  font-size: 0.85rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  margin-bottom: 0.75rem;
+  opacity: 0.8;
+}
+
+// Order history
+.order-header,
+.order-row {
+  display: grid;
+  grid-template-columns: 1.2fr 0.6fr 0.6fr 1fr 1fr 1fr;
+  gap: 0.5rem;
+  padding: 0.45rem 0.5rem;
+  align-items: center;
+}
+
+.order-header {
+  font-size: 0.65rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  opacity: 0.5;
+  border-bottom: 1px solid var(--border);
+}
+
+.order-row {
+  font-size: 0.8rem;
+  border-bottom: 1px solid var(--border);
+  font-family: 'JetBrains Mono', 'Fira Code', monospace;
+
+  &:last-child {
+    border-bottom: none;
+  }
+}
+
+.order-type {
+  font-weight: 700;
+}
+
+// Dividend rows
+.div-row {
+  display: grid;
+  grid-template-columns: 1.2fr 0.8fr 1fr 1fr;
+  gap: 0.5rem;
+  padding: 0.45rem 0.5rem;
+  font-size: 0.8rem;
+  border-bottom: 1px solid var(--border);
+  font-family: 'JetBrains Mono', 'Fira Code', monospace;
+
+  &:last-child {
+    border-bottom: none;
+  }
+
+  &.total-row {
+    font-weight: 700;
+    border-top: 2px solid var(--border);
+    border-bottom: none;
+    margin-top: 0.25rem;
+    padding-top: 0.6rem;
+  }
+}
+
+// Color helpers
+.pos-green {
+  color: #22c55e;
+}
+
+.pos-red {
+  color: #ef4444;
+}
+
+// Animation
+.fade-up {
+  animation: fadeUp 0.35s ease-out both;
+}
+
+@keyframes fadeUp {
+  from {
+    opacity: 0;
+    transform: translateY(8px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+// Loading skeletons
+.loading-skeleton {
+  border-radius: 4px;
+  background: var(--border);
+}
+
+.loading-pulse {
+  animation: skeleton-pulse 1.5s ease-in-out infinite;
+}
+
+@keyframes skeleton-pulse {
+  0%, 100% { opacity: 0.4; }
+  50% { opacity: 0.8; }
+}
+
+// Error state
+.section-error {
+  padding: 1.5rem;
+  text-align: center;
+  color: #ef4444;
+  font-size: 0.9rem;
+  background: var(--surface);
+  border: 1px solid #ef4444;
+  border-radius: 8px;
+}
+
+// Responsive
+@media (max-width: 768px) {
+  .detail-stats {
+    grid-template-columns: repeat(2, 1fr);
+  }
+
+  .detail-info-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .order-header,
+  .order-row {
+    font-size: 0.7rem;
+  }
+}

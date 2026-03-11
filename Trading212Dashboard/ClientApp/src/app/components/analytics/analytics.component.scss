@@ -1,0 +1,117 @@
+:host {
+  display: block;
+}
+
+/* Section headings */
+.section-heading {
+  font-size: 0.7rem;
+  font-weight: 600;
+  color: var(--muted);
+  text-transform: uppercase;
+  letter-spacing: 0.1em;
+  margin: 1.5rem 0 0.75rem;
+  padding-bottom: 0.4rem;
+  border-bottom: 1px solid var(--border);
+}
+
+/* Doughnut grid — 2×2 on desktop */
+.doughnut-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 0.75rem;
+}
+
+/* Generic two-column layout */
+.two-col {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 0.75rem;
+}
+
+/* Calendar */
+.cal-row {
+  display: grid;
+  grid-template-columns: 60px 1fr 70px 80px 80px 70px;
+  gap: 0.5rem;
+  align-items: center;
+  padding: 0.35rem 0;
+}
+
+.cal-header {
+  font-size: 0.7rem;
+  opacity: 0.6;
+  border-bottom: 1px solid var(--border);
+  padding-bottom: 0.4rem;
+  margin-bottom: 0.25rem;
+}
+
+.cal-badge {
+  display: inline-block;
+  padding: 0.1rem 0.45rem;
+  border-radius: 4px;
+  font-size: 0.65rem;
+  font-weight: 600;
+  text-transform: uppercase;
+
+  &.soon {
+    background: var(--green);
+    color: #000;
+  }
+
+  &.upcoming {
+    background: var(--cyan);
+    color: #000;
+  }
+
+  &.later {
+    background: var(--muted);
+    color: #fff;
+  }
+}
+
+.div-row {
+  display: grid;
+  grid-template-columns: 1fr 1fr 1fr 1fr;
+  gap: 0.5rem;
+  padding: 0.3rem 0;
+}
+
+.total-row {
+  border-top: 2px solid var(--border);
+  margin-top: 0.35rem;
+  padding-top: 0.5rem;
+  font-weight: 700;
+  color: var(--white) !important;
+
+  span:nth-child(3) {
+    color: var(--green) !important;
+  }
+}
+
+.small-row {
+  display: grid;
+  grid-template-columns: 1fr 2fr 1fr;
+  gap: 0.5rem;
+  padding: 0.3rem 0;
+}
+
+.interest-months {
+  margin-bottom: 0.75rem;
+}
+
+/* Cards need bottom margin when stacked */
+:host .analytics-card {
+  margin-bottom: 0.75rem;
+}
+
+@media (max-width: 700px) {
+  .doughnut-grid,
+  .two-col {
+    grid-template-columns: 1fr;
+  }
+
+  .cal-row {
+    grid-template-columns: 50px 1fr 60px 70px 70px 60px;
+    font-size: 0.75rem;
+  }
+}

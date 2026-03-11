@@ -1,0 +1,62 @@
+@if (orders(); as data) {
+  <div class="search-bar">
+    <input class="search-input"
+           type="text"
+           placeholder="Filter by symbol, name or side..."
+           [value]="filter()"
+           (input)="onFilter($event)" />
+  </div>
+
+  @if (filteredAndSorted().length) {
+    <div class="order-header sortable" role="row">
+      <span (click)="toggleSort('date')">DATE{{ sortArrow('date') }}</span>
+      <span (click)="toggleSort('ticker')">TICKER{{ sortArrow('ticker') }}</span>
+      <span (click)="toggleSort('side')">SIDE{{ sortArrow('side') }}</span>
+      <span class="pos-right" (click)="toggleSort('quantity')">QTY{{ sortArrow('quantity') }}</span>
+      <span class="pos-right" (click)="toggleSort('fillPrice')">PRICE{{ sortArrow('fillPrice') }}</span>
+      <span class="pos-right" (click)="toggleSort('netValue')">VALUE{{ sortArrow('netValue') }}</span>
+      <span class="pos-right" (click)="toggleSort('realisedPL')">P&amp;L{{ sortArrow('realisedPL') }}</span>
+    </div>
+
+    @for (order of filteredAndSorted(); track order.id) {
+      <div class="order-row" role="row">
+        <span class="mono">{{ order.date | date:'dd MMM yy' }}</span>
+        <span>
+          <strong>{{ order.symbol | shortTicker }}</strong>
+          <small>{{ order.name }}</small>
+        </span>
+        <span>
+          <span class="order-type" [class.BUY]="order.side === 'BUY'" [class.SELL]="order.side === 'SELL'">
+            {{ order.side }}
+          </span>
+        </span>
+        <span class="pos-right mono">{{ order.quantity }}</span>
+        <span class="pos-right mono">{{ formatPrice(order.fillPrice, order.currency) }}</span>
+        <span class="pos-right mono">{{ order.netValue | formatGbp }}</span>
+        <span class="pos-right mono"
+              [class.pos-green]="(order.realisedPL ?? 0) > 0"
+              [class.pos-red]="(order.realisedPL ?? 0) < 0">
+          {{ order.realisedPL | formatGbp }}
+        </span>
+      </div>
+    }
+
+    <div class="order-row total-row" role="row">
+      <span class="mono">{{ totalCount() }} orders</span>
+      <span></span>
+      <span class="mono">{{ buyCount() }}B / {{ sellCount() }}S</span>
+      <span></span>
+      <span></span>
+      <span class="pos-right mono">{{ totalValue() | formatGbp }}</span>
+      <span class="pos-right mono"
+            [class.pos-green]="totalRealisedPL() > 0"
+            [class.pos-red]="totalRealisedPL() < 0">
+        {{ totalRealisedPL() | formatGbp }}
+      </span>
+    </div>
+  } @else {
+    <p class="empty">No past orders found.</p>
+  }
+} @else {
+  <p class="empty">No past orders found.</p>
+}

@@ -1,0 +1,53 @@
+<div class="search-bar">
+  <input
+    class="search-input"
+    type="text"
+    placeholder="Search by ticker or name..."
+    [value]="searchTerm()"
+    (input)="onSearch($event)" />
+</div>
+
+@if (positions(); as pos) {
+  <div class="pos-header sortable">
+    <span (click)="toggleSort('name')">NAME <span class="sort-arrow">{{ sortArrow('name') }}</span></span>
+    <span (click)="toggleSort('weight')">WEIGHT <span class="sort-arrow">{{ sortArrow('weight') }}</span></span>
+    <span (click)="toggleSort('value')">VALUE <span class="sort-arrow">{{ sortArrow('value') }}</span></span>
+    <span (click)="toggleSort('pl')">P&amp;L <span class="sort-arrow">{{ sortArrow('pl') }}</span></span>
+    <span (click)="toggleSort('plPct')">P&amp;L% <span class="sort-arrow">{{ sortArrow('plPct') }}</span></span>
+    <span (click)="toggleSort('weight')">WEIGHT% <span class="sort-arrow">{{ sortArrow('weight') }}</span></span>
+  </div>
+
+  @for (p of filtered(); track p.ticker) {
+    <div class="pos-row clickable" (click)="selectPosition(p.ticker)">
+      <div>
+        <span class="pos-ticker">{{ p.ticker.split('_')[0] }}</span>
+        <span class="pos-name">{{ p.name }}</span>
+        <span class="pos-prices">{{ formatPrice(p.averagePrice, p.currency) }} → {{ formatPrice(p.currentPrice, p.currency) }}</span>
+      </div>
+      <div class="pos-right">
+        <div class="weight-bar-wrap">
+          <div class="weight-bar" [style.width.%]="p.weight"></div>
+        </div>
+      </div>
+      <div class="pos-right mono">{{ p.currentValue | formatGbp }}</div>
+      <div class="pos-right mono" [class.pos-green]="p.profitLoss >= 0" [class.pos-red]="p.profitLoss < 0">
+        {{ p.profitLoss | formatGbp }}
+      </div>
+      <div class="pos-right mono" [class.pos-green]="p.profitLossPercent >= 0" [class.pos-red]="p.profitLossPercent < 0">
+        {{ p.profitLossPercent | formatPct }}
+      </div>
+      <div class="pos-right mono">{{ p.weight.toFixed(1) }}%</div>
+    </div>
+  }
+
+  <div class="pos-row total-row">
+    <div>TOTAL</div>
+    <div></div>
+    <div class="pos-right mono">{{ totalValue() | formatGbp }}</div>
+    <div class="pos-right mono" [class.pos-green]="totalPL() >= 0" [class.pos-red]="totalPL() < 0">
+      {{ totalPL() | formatGbp }}
+    </div>
+    <div></div>
+    <div></div>
+  </div>
+}

@@ -1,0 +1,28 @@
+@if (alerts()?.length && !dismissed) {
+  <div class="alerts-banner">
+    @if (collapsed) {
+      <div class="alerts-minimised">
+        <span>{{ alerts()!.length }} alert{{ alerts()!.length > 1 ? 's' : '' }}</span>
+        <button (click)="toggle()">Show</button>
+      </div>
+    } @else {
+      <div class="alerts-header">
+        <span>Alerts ({{ alerts()!.length }})</span>
+        <div>
+          <button (click)="toggle()">Hide</button>
+          <button (click)="dismiss()">Dismiss</button>
+        </div>
+      </div>
+      @for (alert of sorted(); track $index) {
+        <div class="alert-row">
+          <span class="alert-severity"
+                [style.background]="severityColor(alert.severity)">
+            {{ alert.severity }}
+          </span>
+          <span class="alert-ticker">{{ alert.ticker }}</span>
+          <span class="alert-msg">{{ alert.message }}</span>
+        </div>
+      }
+    }
+  </div>
+}

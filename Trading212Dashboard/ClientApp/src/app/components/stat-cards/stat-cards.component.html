@@ -1,0 +1,25 @@
+@if (portfolio(); as p) {
+  <div class="stats-grid">
+    <div class="stat-card val">
+      <span class="stat-label">Total Value</span>
+      <span class="stat-value">{{ p.cash.total | formatGbp }}</span>
+    </div>
+
+    <div class="stat-card pl" [class.neg]="p.cash.result < 0">
+      <span class="stat-label">P&amp;L</span>
+      <span class="stat-value">{{ p.cash.result | formatGbp }}</span>
+      <span class="stat-sub">{{ plPct | formatPct }}</span>
+    </div>
+
+    <div class="stat-card inv">
+      <span class="stat-label">Invested</span>
+      <span class="stat-value">{{ p.cash.invested | formatGbp }}</span>
+    </div>
+
+    <div class="stat-card cash">
+      <span class="stat-label">Free Cash</span>
+      <span class="stat-value">{{ p.cash.free | formatGbp }}</span>
+      <span class="stat-sub">{{ freeCashPct | formatPct }} of total</span>
+    </div>
+  </div>
+}
