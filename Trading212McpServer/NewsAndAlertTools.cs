@@ -4,7 +4,8 @@ using System.Text;
 using System.Text.RegularExpressions;
 using System.Xml;
 using ModelContextProtocol.Server;
-using Trading212McpServer.Config;
+using Trading212.Shared;
+using Trading212.Shared.Config;
 
 namespace Trading212McpServer;
 

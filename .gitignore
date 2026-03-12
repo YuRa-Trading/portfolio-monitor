@@ -50,6 +50,8 @@ appsettings.Development.json
 # =========================
 portfolio-snapshots.json
 alerts.json
+*.db
+*.db-journal
 
 # =========================
 # OS

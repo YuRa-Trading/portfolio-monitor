@@ -1,6 +1,6 @@
 using System.Text.Json.Serialization;
 
-namespace Trading212McpServer.Models;
+namespace Trading212.Shared.Models;
 
 public class AccountCash
 {
@@ -295,4 +295,42 @@ public class PortfolioSummary
     public AccountCash Cash { get; set; } = new();
     public List<Position> Positions { get; set; } = [];
     public Dictionary<string, Instrument> Instruments { get; set; } = [];
+}
+
+public class EarningsEventData
+{
+    public decimal? Actual { get; set; }
+    public decimal? Estimate { get; set; }
+    public string? Period { get; set; }
+    public decimal? Surprise { get; set; }
+    public decimal? SurprisePercent { get; set; }
+    public string? Symbol { get; set; }
+    public int? Year { get; set; }
+    public int? Quarter { get; set; }
+}
+
+public class CachedEarningsDocument
+{
+    public string Id { get; set; } = string.Empty;
+    public DateTime FetchedAtUtc { get; set; }
+    public List<EarningsEventData> Events { get; set; } = [];
+}
+
+public class CachedPortfolioDocument
+{
+    public string Id { get; set; } = "latest";
+    public DateTime FetchedAtUtc { get; set; }
+    public AccountCash Cash { get; set; } = new();
+    public List<Position> Positions { get; set; } = [];
+}
+
+public class PortfolioSnapshotDocument
+{
+    public string Id { get; set; } = string.Empty; // "yyyy-MM-dd"
+    public decimal TotalValue { get; set; }
+    public decimal Invested { get; set; }
+    public decimal Pnl { get; set; }
+    public decimal PnlPct { get; set; }
+    public decimal FreeCash { get; set; }
+    public int PositionCount { get; set; }
 }

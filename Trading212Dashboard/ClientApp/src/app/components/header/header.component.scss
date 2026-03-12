@@ -54,11 +54,24 @@
   50% { opacity: 0.4; }
 }
 
-.live-label {
-  font-size: 0.7rem;
+.env-badge {
+  font-size: 0.65rem;
   font-weight: 700;
   letter-spacing: 0.1em;
-  color: #22c55e;
+  padding: 0.2rem 0.5rem;
+  border-radius: 4px;
+  background: #22c55e;
+  color: #fff;
+
+  &.demo {
+    background: #f59e0b;
+    color: #000;
+  }
+}
+
+.account-id {
+  font-size: 0.75rem;
+  opacity: 0.6;
 }
 
 .last-update {

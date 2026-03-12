@@ -6,6 +6,7 @@ import {
   DividendsResponse, OrdersResponse, InterestResponse,
   SnapshotsResponse, DividendCalendarResponse,
   PositionDetailResponse, BenchmarkResponse,
+  EarningsCalendarResponse, ConfigResponse,
 } from '../models/portfolio.model';
 
 const BASE = '/api';
@@ -25,6 +26,11 @@ export class ApiService {
   private snapshots$ = this.fetch<SnapshotsResponse>('/snapshots');
   private divCalendar$ = this.fetch<DividendCalendarResponse>('/dividend-calendar');
   private benchmark$ = this.fetch<BenchmarkResponse>('/benchmark');
+  private earningsCalendar$ = this.fetch<EarningsCalendarResponse>('/earnings-calendar');
+  private config$ = this.http.get<ConfigResponse>(`${BASE}/config`).pipe(
+    catchError(() => of(null as unknown as ConfigResponse)),
+    shareReplay({ bufferSize: 1, refCount: true }),
+  );
 
   getPortfolio() { return this.portfolio$; }
   getAlerts() { return this.alerts$; }
@@ -36,13 +42,18 @@ export class ApiService {
   getSnapshots() { return this.snapshots$; }
   getDividendCalendar() { return this.divCalendar$; }
   getBenchmark() { return this.benchmark$; }
+  getEarningsCalendar() { return this.earningsCalendar$; }
+  getConfig() { return this.config$; }
 
   getPositionDetail(ticker: string): Observable<PositionDetailResponse> {
     return this.http.get<PositionDetailResponse>(`${BASE}/position/${encodeURIComponent(ticker)}`);
   }
 
   refreshAll(): void {
-    this.refresh$.next();
+    // Fetch fresh data from T212 API, then re-trigger all GETs
+    this.http.post(`${BASE}/refresh`, {}).pipe(
+      catchError(() => of(null))
+    ).subscribe(() => this.refresh$.next());
   }
 
   private fetch<T>(path: string): Observable<T> {

@@ -12,8 +12,12 @@
   </a>
 
   <div class="header-right">
-    <span class="live-dot"></span>
-    <span class="live-label">LIVE</span>
+    @if (config(); as cfg) {
+      <span class="env-badge" [class.demo]="cfg.environment === 'DEMO'">{{ cfg.environment }}</span>
+      <span class="account-id mono">{{ cfg.accountId }}</span>
+    } @else {
+      <span class="live-dot"></span>
+    }
 
     @if (lastUpdate()) {
       <span class="last-update mono">{{ lastUpdate() | date:'HH:mm:ss' }}</span>

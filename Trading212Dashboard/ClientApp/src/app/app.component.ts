@@ -51,6 +51,8 @@ export class AppComponent {
   readonly snapshots$ = this.api.getSnapshots();
   readonly divCalendar$ = this.api.getDividendCalendar();
   readonly benchmark$ = this.api.getBenchmark();
+  readonly earningsCalendar$ = this.api.getEarningsCalendar();
+  readonly config$ = this.api.getConfig();
 
   readonly activeTab = signal<Tab>('positions');
   readonly selectedTicker = signal<string | null>(null);

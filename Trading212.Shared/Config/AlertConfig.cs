@@ -1,6 +1,6 @@
 using Microsoft.Extensions.Configuration;
 
-namespace Trading212McpServer.Config;
+namespace Trading212.Shared.Config;
 
 public class AlertConfig
 {

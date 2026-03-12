@@ -1,8 +1,8 @@
 using System.Net.Http.Json;
 using Microsoft.Extensions.Logging;
-using Trading212McpServer.Models;
+using Trading212.Shared.Models;
 
-namespace Trading212McpServer;
+namespace Trading212.Shared;
 
 public class Trading212Client
 {

@@ -130,6 +130,49 @@
   </div>
 }
 
+<!-- ═══ Section: Upcoming Events ═══ -->
+@if (earningsCalendar()?.items?.length! > 0) {
+  <h4 class="section-heading fade-up">Upcoming Events</h4>
+  <div class="analytics-card fade-up">
+    <h3 class="analytics-title">Earnings Calendar <span class="mono">({{ earningsCalendar()!.count }} stocks)</span></h3>
+    <div class="earnings-row earnings-header mono">
+      <span>STATUS</span>
+      <span>TICKER</span>
+      <span>NEXT EARNINGS</span>
+      <span>EST. EPS</span>
+      <span>LAST EPS</span>
+      <span>BEAT?</span>
+    </div>
+    @for (item of sortedEarningsItems(); track item.ticker) {
+      <div class="earnings-row">
+        <span>
+          <span class="cal-badge" [class]="earningsBadge(item)">
+            {{ earningsBadgeLabel(item) }}
+          </span>
+        </span>
+        <span class="mono">{{ item.symbol || (item.ticker | shortTicker) }}</span>
+        <span class="mono">{{ item.nextEarningsDate ?? '—' }}</span>
+        <span class="mono">{{ item.nextEpsEstimate != null ? item.nextEpsEstimate.toFixed(2) : '—' }}</span>
+        <span class="mono">
+          @if (item.lastEps != null) {
+            {{ item.lastEps.toFixed(2) }}
+            @if (item.lastEpsEstimate != null) {
+              <span class="muted"> / {{ item.lastEpsEstimate.toFixed(2) }}</span>
+            }
+          } @else { — }
+        </span>
+        <span>
+          @if (item.epsBeat === true) {
+            <span class="pos-green">Beat</span>
+          } @else if (item.epsBeat === false) {
+            <span class="pos-red">Miss</span>
+          } @else { — }
+        </span>
+      </div>
+    }
+  </div>
+}
+
 <!-- ═══ Section: Income ═══ -->
 @if (divCalendar()?.items?.length! > 0 || dividends()?.items?.length! > 0 || interest()?.items?.length! > 0) {
   <h4 class="section-heading fade-up">Income</h4>

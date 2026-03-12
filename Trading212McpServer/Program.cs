@@ -2,7 +2,7 @@ using System.Text;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
-using Trading212McpServer;
+using Trading212.Shared;
 
 var apiKey = Environment.GetEnvironmentVariable("T212_API_KEY");
 var apiSecret = Environment.GetEnvironmentVariable("T212_API_SECRET");
@@ -42,7 +42,7 @@ builder.Services
     .WithToolsFromAssembly();
 
 // Initialize alert config from appsettings.json (cached for tool calls)
-Trading212McpServer.Config.AlertConfigLoader.Load(builder.Configuration);
+Trading212.Shared.Config.AlertConfigLoader.Load(builder.Configuration);
 
 var app = builder.Build();
 await app.RunAsync();

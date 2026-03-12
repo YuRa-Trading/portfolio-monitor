@@ -67,6 +67,28 @@
     background: var(--muted);
     color: #fff;
   }
+
+  &.imminent {
+    background: var(--red);
+    color: #fff;
+  }
+}
+
+/* Earnings Calendar */
+.earnings-row {
+  display: grid;
+  grid-template-columns: 60px 80px 100px 80px 120px 50px;
+  gap: 0.5rem;
+  align-items: center;
+  padding: 0.35rem 0;
+}
+
+.earnings-header {
+  font-size: 0.7rem;
+  opacity: 0.6;
+  border-bottom: 1px solid var(--border);
+  padding-bottom: 0.4rem;
+  margin-bottom: 0.25rem;
 }
 
 .div-row {
@@ -112,6 +134,11 @@
 
   .cal-row {
     grid-template-columns: 50px 1fr 60px 70px 70px 60px;
+    font-size: 0.75rem;
+  }
+
+  .earnings-row {
+    grid-template-columns: 50px 70px 80px 65px 100px 40px;
     font-size: 0.75rem;
   }
 }

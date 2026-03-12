@@ -59,6 +59,7 @@ A stdio-based MCP server that exposes your Trading 212 portfolio as tools for Cl
 | `get_portfolio_analysis` | Winners/losers, concentration metrics, position sizing |
 | `get_dividend_history` | Recent dividend payments |
 | `search_instrument` | Find T212 ticker symbols by name (e.g. "Tesla" → `TSLA_US_EQ`) |
+| `get_earnings_calendar` | Upcoming earnings dates, EPS estimates, and beat/miss for held stocks |
 
 ### Trading212Dashboard
 
@@ -70,6 +71,7 @@ An ASP.NET Core backend + Angular 19 SPA that gives you a real-time portfolio da
 - Analytics page with charts (performance, benchmark comparison, breakdowns)
 - Doughnut charts for currency, exchange, asset type, and weight distribution
 - Benchmark comparison against S&P 500 and FTSE 100 (via Yahoo Finance)
+- Earnings calendar with EPS estimates and beat/miss indicators
 - Dividend calendar and income tracking
 - News feed with configurable keyword filtering
 - Risk alerts (drawdown, concentration, position size)
@@ -82,6 +84,7 @@ An ASP.NET Core backend + Angular 19 SPA that gives you a real-time portfolio da
 - [Node.js 20+](https://nodejs.org/) (for Angular frontend)
 - A Trading 212 account with API access enabled
 - API key and secret from Trading 212 (Settings → API)
+- (Optional) [Finnhub](https://finnhub.io/register) free API key for earnings calendar
 
 ## Setup
 
@@ -106,14 +109,16 @@ Then set the variables in your shell:
 ```bash
 export T212_API_KEY="your-api-key"
 export T212_API_SECRET="your-api-secret"
-export T212_ENVIRONMENT="live"   # or "demo"
+export T212_ENVIRONMENT="live"          # or "demo"
+export FINNHUB_API_KEY="your-key"       # optional — enables earnings calendar
 ```
 
 **Windows (PowerShell):**
 ```powershell
 $env:T212_API_KEY = "your-api-key"
 $env:T212_API_SECRET = "your-api-secret"
-$env:T212_ENVIRONMENT = "live"   # or "demo"
+$env:T212_ENVIRONMENT = "live"          # or "demo"
+$env:FINNHUB_API_KEY = "your-key"       # optional — enables earnings calendar
 ```
 
 Alternatively, create a `Properties/launchSettings.json` in each project (these are git-ignored):
@@ -126,7 +131,8 @@ Alternatively, create a `Properties/launchSettings.json` in each project (these 
       "environmentVariables": {
         "T212_API_KEY": "your-api-key",
         "T212_API_SECRET": "your-api-secret",
-        "T212_ENVIRONMENT": "live"
+        "T212_ENVIRONMENT": "live",
+        "FINNHUB_API_KEY": "your-key"
       }
     }
   }
@@ -174,7 +180,8 @@ Add to your Claude Desktop config:
       "env": {
         "T212_API_KEY": "your-key",
         "T212_API_SECRET": "your-secret",
-        "T212_ENVIRONMENT": "live"
+        "T212_ENVIRONMENT": "live",
+        "FINNHUB_API_KEY": "your-key"
       }
     }
   }
@@ -185,13 +192,16 @@ Add to your Claude Desktop config:
 
 ```
 portfolio-monitor/
+├── Trading212.Shared/            # Shared class library
+│   ├── Trading212Client.cs       # HTTP client for T212 API
+│   ├── Models/Trading212Models.cs # API response + LiteDB document models
+│   ├── Services/CacheService.cs  # LiteDB cache (portfolio, snapshots, earnings)
+│   └── Config/AlertConfig.cs     # Alert threshold configuration
+│
 ├── Trading212McpServer/          # MCP server (console app)
 │   ├── Program.cs                # Entry point (stdio MCP protocol)
-│   ├── Trading212Client.cs       # HTTP client for T212 API
 │   ├── Trading212Tools.cs        # MCP tool definitions
-│   ├── NewsAndAlertTools.cs      # News + alert tools
-│   ├── Config/AlertConfig.cs     # Alert threshold configuration
-│   └── Models/Trading212Models.cs # API response models
+│   └── NewsAndAlertTools.cs      # News + alert tools
 │
 ├── Trading212Dashboard/          # Web dashboard (ASP.NET + Angular)
 │   ├── Program.cs                # REST API endpoints + SPA hosting
@@ -204,7 +214,19 @@ portfolio-monitor/
 └── Trading 212 MCP.sln           # Visual Studio solution
 ```
 
-Both projects share C# models via MSBuild `<Compile Include>` links — the source of truth lives in `Trading212McpServer/`.
+Both projects reference `Trading212.Shared` as a `<ProjectReference>`, sharing the API client, models, cache, and configuration.
+
+## Caching & Multi-Account Support
+
+Both the Dashboard and MCP Server share a single LiteDB database at `%APPDATA%/Trading212MCP/cache.db`. Data is partitioned by Trading 212 account ID, so you can switch between accounts (demo, live ISA, multiple users) without data conflicts.
+
+| Data | Cache Behaviour | Partitioned? |
+|---|---|---|
+| Portfolio | Served from cache; refreshed on-demand via "Refresh" button (Dashboard) or always-fresh (MCP) | Per account |
+| Snapshots | One daily snapshot auto-saved per account, max 365 days | Per account |
+| Earnings | Cached for 12 hours per symbol | Shared (market data) |
+
+The account ID is fetched automatically via `GET /equity/account/info` at startup.
 
 ## Trading 212 Ticker Format
 
@@ -223,7 +245,8 @@ Use the `search_instrument` MCP tool or the `/api/instruments` endpoint to look 
 
 | Endpoint | Description |
 |---|---|
-| `GET /api/portfolio` | Portfolio summary with positions |
+| `POST /api/refresh` | Fetch fresh data from T212 API and update cache |
+| `GET /api/portfolio` | Portfolio summary with positions (served from cache) |
 | `GET /api/position/{ticker}` | Single position detail |
 | `GET /api/alerts` | Risk alerts |
 | `GET /api/analytics` | Performance analytics |
@@ -233,6 +256,7 @@ Use the `search_instrument` MCP tool or the `/api/instruments` endpoint to look 
 | `GET /api/interest?limit=N` | Interest payments |
 | `GET /api/snapshots` | Historical portfolio snapshots |
 | `GET /api/dividend-calendar` | Upcoming dividends |
+| `GET /api/earnings-calendar` | Upcoming earnings dates + EPS estimates (requires FINNHUB_API_KEY) |
 | `GET /api/benchmark` | Performance vs S&P 500 / FTSE 100 |
 
 ## Trading 212 API Reference
@@ -285,7 +309,8 @@ Only include the sections you want to override — the rest falls back to `appse
 - **Backend:** .NET 10, ASP.NET Core Minimal APIs
 - **Frontend:** Angular 19 (standalone components, signals), Chart.js 4.x
 - **MCP:** ModelContextProtocol SDK 1.1.0
-- **Data:** Trading 212 API, Yahoo Finance (benchmarks), BBC/Reuters/CNBC RSS (news)
+- **Storage:** LiteDB (embedded NoSQL, shared cache at `%APPDATA%/Trading212MCP/cache.db`)
+- **Data:** Trading 212 API, Finnhub (earnings), Yahoo Finance (benchmarks), BBC/Reuters/CNBC RSS (news)
 
 ## License
 

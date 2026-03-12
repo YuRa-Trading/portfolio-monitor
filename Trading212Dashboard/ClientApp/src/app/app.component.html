@@ -1,7 +1,7 @@
 <router-outlet style="display:none" />
 
 <div class="app">
-  <app-header [lastUpdate]="toDate((portfolio$ | async)?.timestamp)" [theme]="theme" (onRefresh)="api.refreshAll()"/>
+  <app-header [lastUpdate]="toDate((portfolio$ | async)?.timestamp)" [config]="(config$ | async)" [theme]="theme" (onRefresh)="api.refreshAll()"/>
 
   <app-stat-cards [portfolio]="(portfolio$ | async)"/>
 
@@ -30,6 +30,7 @@
       [interest]="(interest$ | async)"
       [snapshots]="(snapshots$ | async)"
       [divCalendar]="(divCalendar$ | async)"
+      [earningsCalendar]="(earningsCalendar$ | async)"
       [benchmark]="(benchmark$ | async)"
       [positions]="(portfolio$ | async)?.positions ?? null"/>
   }

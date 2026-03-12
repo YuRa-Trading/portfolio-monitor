@@ -1,7 +1,10 @@
 using System.ComponentModel;
 using System.Text;
+using System.Text.Json;
 using ModelContextProtocol.Server;
-using Trading212McpServer.Models;
+using Trading212.Shared;
+using Trading212.Shared.Models;
+using Trading212.Shared.Services;
 
 namespace Trading212McpServer;
 
@@ -9,10 +12,31 @@ namespace Trading212McpServer;
 public class Trading212Tools
 {
     private readonly Trading212Client _client;
+    private static readonly HttpClient _finnhubClient = new() { Timeout = TimeSpan.FromSeconds(10) };
+    private static readonly string? _finnhubKey = Environment.GetEnvironmentVariable("FINNHUB_API_KEY");
+    private static CacheService? _cacheInstance;
+    private static readonly SemaphoreSlim _cacheLock = new(1, 1);
 
     public Trading212Tools(Trading212Client client)
     {
         _client = client;
+    }
+
+    private async Task<CacheService> GetCacheAsync()
+    {
+        if (_cacheInstance is not null) return _cacheInstance;
+        await _cacheLock.WaitAsync();
+        try
+        {
+            if (_cacheInstance is not null) return _cacheInstance;
+            var info = await _client.GetAccountInfoAsync();
+            _cacheInstance = new CacheService(info.Id);
+            return _cacheInstance;
+        }
+        finally
+        {
+            _cacheLock.Release();
+        }
     }
 
     [McpServerTool(Name = "get_portfolio_summary")]
@@ -330,4 +354,116 @@ public class Trading212Tools
             return $"Error searching instruments: {ex.Message}";
         }
     }
+
+    [McpServerTool(Name = "get_earnings_calendar")]
+    [Description("Get upcoming earnings dates for all stocks in your portfolio. Shows next earnings date, " +
+        "EPS estimates, and whether the company beat or missed estimates last quarter. " +
+        "Requires FINNHUB_API_KEY environment variable to be set.")]
+    public async Task<string> GetEarningsCalendar()
+    {
+        if (string.IsNullOrWhiteSpace(_finnhubKey))
+            return "Earnings calendar unavailable — FINNHUB_API_KEY environment variable not set.";
+
+        try
+        {
+            var summary = await _client.GetPortfolioSummaryAsync();
+            var instruments = await _client.GetInstrumentsAsync();
+            var typeMap = instruments.ToDictionary(i => i.Ticker, i => i.Type);
+
+            var sb = new StringBuilder();
+            sb.AppendLine("═══ Upcoming Earnings Calendar ═══");
+            sb.AppendLine();
+            sb.AppendLine($"  {"Ticker",-16} {"Next Earnings",-14} {"Days",5} {"Est EPS",9} {"Last EPS",10} {"Beat?",6}");
+            sb.AppendLine($"  {new string('─', 16)} {new string('─', 14)} {new string('─', 5)} {new string('─', 9)} {new string('─', 10)} {new string('─', 6)}");
+
+            var results = new List<(string Ticker, string Line, int DaysUntil)>();
+            var now = DateTimeOffset.UtcNow;
+
+            foreach (var p in summary.Positions)
+            {
+                if (typeMap.TryGetValue(p.Instrument.Ticker, out var t) && t == "ETF")
+                    continue;
+
+                var symbol = ToStandardSymbol(p.Instrument.Ticker, p.Instrument.Currency);
+
+                try
+                {
+                    // Check LiteDB cache first
+                    var cache = await GetCacheAsync();
+                    var events = cache.GetEarningsIfFresh(symbol);
+
+                    if (events is null)
+                    {
+                        var url = $"https://finnhub.io/api/v1/stock/earnings?symbol={symbol}&token={_finnhubKey}";
+                        var json = await _finnhubClient.GetStringAsync(url);
+                        events = JsonSerializer.Deserialize<List<EarningsEventData>>(json,
+                            new JsonSerializerOptions { PropertyNameCaseInsensitive = true }) ?? [];
+                        cache.UpsertEarnings(symbol, events);
+                    }
+
+                    if (events.Count == 0) continue;
+
+                    var last = events.OrderByDescending(e => e.Period).FirstOrDefault(e => e.Actual is not null);
+                    if (last is null) continue;
+
+                    // Estimate next: last period + ~90 days
+                    string nextDate = "—";
+                    int daysUntil = 999;
+                    if (last.Period is not null && DateTimeOffset.TryParse(last.Period, out var lastPeriod))
+                    {
+                        var nextEstimate = lastPeriod.AddDays(90);
+                        if (nextEstimate < now) nextEstimate = lastPeriod.AddDays(180);
+                        nextDate = nextEstimate.ToString("yyyy-MM-dd");
+                        daysUntil = (int)(nextEstimate - now).TotalDays;
+                    }
+
+                    var estEps = last.Estimate?.ToString("N2") ?? "—";
+                    var lastEps = last.Actual?.ToString("N2") ?? "—";
+                    var beat = last.Actual is not null && last.Estimate is not null
+                        ? (last.Actual > last.Estimate ? "Beat" : "Miss")
+                        : "—";
+
+                    results.Add((p.Instrument.Ticker, $"  {p.Instrument.Ticker,-16} {nextDate,-14} {daysUntil,5} {estEps,9} {lastEps,10} {beat,6}", daysUntil));
+                }
+                catch { /* skip individual failures */ }
+            }
+
+            foreach (var r in results.OrderBy(r => r.DaysUntil))
+                sb.AppendLine(r.Line);
+
+            sb.AppendLine();
+            sb.AppendLine($"  {results.Count} stocks with earnings data.");
+
+            return sb.ToString();
+        }
+        catch (HttpRequestException ex)
+        {
+            return $"Error fetching earnings calendar: {ex.Message}";
+        }
+    }
+
+    private static string ToStandardSymbol(string t212Ticker, string currency)
+    {
+        var parts = t212Ticker.Split('_');
+        var symbol = parts[0];
+        if (parts.Length >= 3)
+        {
+            return parts[1] switch
+            {
+                "US" => symbol,
+                "L" => symbol + ".L",
+                "DE" => symbol + ".DE",
+                "PA" => symbol + ".PA",
+                "MI" => symbol + ".MI",
+                "AS" => symbol + ".AS",
+                _ => symbol
+            };
+        }
+        return currency switch
+        {
+            "GBX" or "GBP" => symbol + ".L",
+            _ => symbol
+        };
+    }
+
 }

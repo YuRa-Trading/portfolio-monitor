@@ -244,3 +244,31 @@ export interface BenchmarkSeries {
   name: string;
   data: BenchmarkPoint[];
 }
+
+export interface ConfigResponse {
+  environment: string;
+  accountId: number;
+  currencyCode: string;
+}
+
+export interface EarningsCalendarResponse {
+  items: EarningsCalendarItem[];
+  count: number;
+}
+
+export interface EarningsCalendarItem {
+  ticker: string;
+  symbol: string;
+  name: string;
+  nextEarningsDate: string | null;
+  daysUntilEarnings: number | null;
+  nextEpsEstimate: number | null;
+  nextRevenueEstimate: number | null;
+  lastEarningsDate: string | null;
+  lastEps: number | null;
+  lastEpsEstimate: number | null;
+  lastRevenue: number | null;
+  lastRevenueEstimate: number | null;
+  epsSurprise: number | null;
+  epsBeat: boolean | null;
+}

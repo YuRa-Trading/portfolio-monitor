@@ -5,6 +5,8 @@ import {
   InterestResponse,
   SnapshotsResponse,
   DividendCalendarResponse,
+  EarningsCalendarResponse,
+  EarningsCalendarItem,
   BenchmarkResponse,
   Position,
   DividendCalendarItem,
@@ -38,6 +40,7 @@ export class AnalyticsComponent {
   snapshots = input<SnapshotsResponse | null>(null);
   divCalendar = input<DividendCalendarResponse | null>(null);
   benchmark = input<BenchmarkResponse | null>(null);
+  earningsCalendar = input<EarningsCalendarResponse | null>(null);
   positions = input<Position[] | null>(null);
 
   positionWeightData = computed(() => {
@@ -155,5 +158,28 @@ export class AnalyticsComponent {
     if (item.daysUntilNext < 14) return 'Soon';
     if (item.daysUntilNext < 60) return 'Upcoming';
     return 'Later';
+  }
+
+  sortedEarningsItems = computed(() => {
+    const cal = this.earningsCalendar();
+    if (!cal?.items?.length) return [];
+    return [...cal.items].sort((a, b) => {
+      const da = a.daysUntilEarnings ?? 999;
+      const db = b.daysUntilEarnings ?? 999;
+      return da - db;
+    });
+  });
+
+  earningsBadge(item: EarningsCalendarItem): string {
+    if (item.daysUntilEarnings == null) return 'later';
+    if (item.daysUntilEarnings <= 7) return 'imminent';
+    if (item.daysUntilEarnings <= 30) return 'soon';
+    if (item.daysUntilEarnings <= 60) return 'upcoming';
+    return 'later';
+  }
+
+  earningsBadgeLabel(item: EarningsCalendarItem): string {
+    if (item.daysUntilEarnings == null) return 'TBD';
+    return `${item.daysUntilEarnings}d`;
   }
 }

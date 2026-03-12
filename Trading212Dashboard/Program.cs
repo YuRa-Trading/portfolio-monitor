@@ -2,13 +2,16 @@ using System.ServiceModel.Syndication;
 using System.Text.Json;
 using System.Text.RegularExpressions;
 using System.Xml;
-using Trading212McpServer;
-using Trading212McpServer.Config;
-using Trading212McpServer.Models;
+using Trading212.Shared;
+using Trading212.Shared.Config;
+using Trading212.Shared.Models;
+using Trading212.Shared.Services;
 
 var apiKey = Environment.GetEnvironmentVariable("T212_API_KEY");
 var apiSecret = Environment.GetEnvironmentVariable("T212_API_SECRET");
 var environment = Environment.GetEnvironmentVariable("T212_ENVIRONMENT") ?? "demo";
+var finnhubKey = Environment.GetEnvironmentVariable("FINNHUB_API_KEY");
+var finnhubAvailable = !string.IsNullOrWhiteSpace(finnhubKey);
 
 if (string.IsNullOrWhiteSpace(apiKey) || string.IsNullOrWhiteSpace(apiSecret))
 {
@@ -44,21 +47,26 @@ var app = builder.Build();
 app.UseCors();
 app.UseStaticFiles();
 
+// ─── Fetch account ID for cache partitioning ────────────────────
+using var startupScope = app.Services.CreateScope();
+var startupClient = startupScope.ServiceProvider.GetRequiredService<Trading212Client>();
+var accountInfo = await startupClient.GetAccountInfoAsync();
+
 // ─── Banner ──────────────────────────────────────────────────────
 var envLabel = environment.Equals("live", StringComparison.OrdinalIgnoreCase) ? "LIVE" : "DEMO";
 Console.WriteLine();
 Console.WriteLine("  ╔══════════════════════════════════════════╗");
 Console.WriteLine("  ║   YuRa Trading · Portfolio Dashboard     ║");
 Console.WriteLine($"  ║   Environment: {envLabel,-4}  ·  Port 5050        ║");
+Console.WriteLine($"  ║   Account: {accountInfo.Id,-10} ({accountInfo.CurrencyCode})       ║");
 Console.WriteLine("  ║   http://localhost:5050                  ║");
 Console.WriteLine("  ╚══════════════════════════════════════════╝");
+if (!finnhubAvailable)
+    Console.WriteLine("  NOTE: FINNHUB_API_KEY not set — earnings calendar disabled.");
 Console.WriteLine();
 
-// ─── Portfolio cache (avoids duplicate T212 API calls) ───────────
-PortfolioSummary? cachedSummary = null;
-DateTimeOffset cacheTime = DateTimeOffset.MinValue;
-var cacheLock = new SemaphoreSlim(1, 1);
-const int CacheSeconds = 15;
+// ─── LiteDB cache (shared with MCP server, partitioned by account) ──
+using var cache = new CacheService(accountInfo.Id);
 
 // ─── Instruments cache (avoids duplicate T212 instrument API calls) ───
 Dictionary<string, string> cachedTypeMap = [];
@@ -94,83 +102,51 @@ async Task<Dictionary<string, string>> GetCachedTypeMap(Trading212Client client)
     }
 }
 
-async Task<PortfolioSummary> GetCachedSummary(Trading212Client client)
+PortfolioSummary GetCachedSummary()
 {
-    if (cachedSummary is not null && DateTimeOffset.UtcNow - cacheTime < TimeSpan.FromSeconds(CacheSeconds))
-        return cachedSummary;
+    var cached = cache.GetPortfolio();
+    if (cached is not null)
+        return new PortfolioSummary { Cash = cached.Cash, Positions = cached.Positions };
 
-    await cacheLock.WaitAsync();
-    try
-    {
-        if (cachedSummary is not null && DateTimeOffset.UtcNow - cacheTime < TimeSpan.FromSeconds(CacheSeconds))
-            return cachedSummary;
-
-        cachedSummary = await client.GetPortfolioSummaryAsync();
-        cacheTime = DateTimeOffset.UtcNow;
-
-        // Auto-save daily snapshot
-        _ = Task.Run(() => SaveSnapshotIfNeeded(cachedSummary));
-
-        return cachedSummary;
-    }
-    finally
-    {
-        cacheLock.Release();
-    }
+    return new PortfolioSummary();
 }
 
-// ─── Portfolio snapshots (daily history) ────────────────────────
-var snapshotPath = Path.Combine(AppContext.BaseDirectory, "portfolio-snapshots.json");
-var snapshotLock = new SemaphoreSlim(1, 1);
-
-async Task SaveSnapshotIfNeeded(PortfolioSummary summary)
+async Task<PortfolioSummary> RefreshPortfolio(Trading212Client client)
 {
-    await snapshotLock.WaitAsync();
-    try
-    {
-        var today = DateTimeOffset.UtcNow.ToString("yyyy-MM-dd");
-        var snapshots = new List<Dictionary<string, object>>();
-
-        if (File.Exists(snapshotPath))
-        {
-            var json = await File.ReadAllTextAsync(snapshotPath);
-            snapshots = JsonSerializer.Deserialize<List<Dictionary<string, object>>>(json) ?? [];
-        }
-
-        if (snapshots.Any(s => s.TryGetValue("date", out var d) && d?.ToString() == today))
-            return;
-
-        var invested = summary.Cash.Invested;
-        var pnlPct = invested != 0 ? Math.Round(summary.Cash.Result / invested * 100, 2) : 0;
-
-        snapshots.Add(new Dictionary<string, object>
-        {
-            ["date"] = today,
-            ["totalValue"] = summary.Cash.Total,
-            ["invested"] = invested,
-            ["pnl"] = summary.Cash.Result,
-            ["pnlPct"] = pnlPct,
-            ["freeCash"] = summary.Cash.Free,
-            ["positionCount"] = summary.Positions.Count
-        });
-
-        if (snapshots.Count > 365)
-            snapshots = snapshots.Skip(snapshots.Count - 365).ToList();
-
-        await File.WriteAllTextAsync(snapshotPath, JsonSerializer.Serialize(snapshots));
-    }
-    catch { /* don't fail portfolio fetch due to snapshot error */ }
-    finally
-    {
-        snapshotLock.Release();
-    }
+    var summary = await client.GetPortfolioSummaryAsync();
+    cache.SavePortfolio(summary);
+    return summary;
 }
 
 // ─── Endpoints ───────────────────────────────────────────────────
 
+app.MapPost("/api/refresh", async (Trading212Client client) =>
+{
+    var summary = await RefreshPortfolio(client);
+    return Results.Json(new
+    {
+        success = true,
+        timestamp = DateTimeOffset.UtcNow,
+        positionCount = summary.Positions.Count,
+        totalValue = summary.Cash.Total
+    });
+});
+
 app.MapGet("/api/portfolio", async (Trading212Client client) =>
 {
-    var summary = await GetCachedSummary(client);
+    var cached = cache.GetPortfolio();
+    PortfolioSummary summary;
+
+    if (cached is null)
+    {
+        // First load — bootstrap from API
+        summary = await RefreshPortfolio(client);
+    }
+    else
+    {
+        summary = new PortfolioSummary { Cash = cached.Cash, Positions = cached.Positions };
+    }
+
     var totalValue = summary.Cash.Total;
 
     // Fetch instrument types (app-level cache)
@@ -223,7 +199,9 @@ app.MapGet("/api/portfolio", async (Trading212Client client) =>
             result = summary.Cash.Result,
             pieValue = summary.Cash.PieValue
         },
-        timestamp = DateTimeOffset.UtcNow
+        timestamp = cached is not null
+            ? new DateTimeOffset(cached.FetchedAtUtc, TimeSpan.Zero)
+            : DateTimeOffset.UtcNow
     });
 });
 
@@ -243,7 +221,7 @@ app.MapGet("/api/cash", async (Trading212Client client) =>
 app.MapGet("/api/alerts", async (Trading212Client client) =>
 {
     var config = AlertConfigLoader.Load();
-    var summary = await GetCachedSummary(client);
+    var summary = GetCachedSummary();
     var cash = summary.Cash;
     var totalValue = cash.Total;
     var alerts = new List<object>();
@@ -447,7 +425,7 @@ app.MapGet("/api/dividends", async (Trading212Client client, int? limit) =>
 app.MapGet("/api/analytics", async (Trading212Client client) =>
 {
     var config = AlertConfigLoader.Load();
-    var summary = await GetCachedSummary(client);
+    var summary = GetCachedSummary();
     var cash = summary.Cash;
     var totalValue = cash.Total;
 
@@ -633,7 +611,7 @@ app.MapGet("/api/interest", async (Trading212Client client, int? limit) =>
 
 app.MapGet("/api/position/{ticker}", async (string ticker, Trading212Client client) =>
 {
-    var summary = await GetCachedSummary(client);
+    var summary = GetCachedSummary();
     var totalValue = summary.Cash.Total;
 
     var position = summary.Positions.FirstOrDefault(p =>
@@ -738,13 +716,20 @@ app.MapGet("/api/position/{ticker}", async (string ticker, Trading212Client clie
     });
 });
 
-app.MapGet("/api/snapshots", async () =>
+app.MapGet("/api/snapshots", () =>
 {
-    if (!File.Exists(snapshotPath))
-        return Results.Json(new { snapshots = Array.Empty<object>(), count = 0 });
-
-    var json = await File.ReadAllTextAsync(snapshotPath);
-    var snapshots = JsonSerializer.Deserialize<List<Dictionary<string, object>>>(json) ?? [];
+    var snapshots = cache.GetSnapshots()
+        .Select(s => new
+        {
+            date = s.Id,
+            totalValue = s.TotalValue,
+            invested = s.Invested,
+            pnl = s.Pnl,
+            pnlPct = s.PnlPct,
+            freeCash = s.FreeCash,
+            positionCount = s.PositionCount
+        })
+        .ToList();
 
     return Results.Json(new { snapshots, count = snapshots.Count });
 });
@@ -752,7 +737,7 @@ app.MapGet("/api/snapshots", async () =>
 app.MapGet("/api/dividend-calendar", async (Trading212Client client) =>
 {
     var dividends = await client.GetDividendsAsync(50);
-    var summary = await GetCachedSummary(client);
+    var summary = GetCachedSummary();
     var heldTickers = summary.Positions.Select(p => p.Instrument.Ticker).ToHashSet();
 
     // Group dividends by ticker, calculate frequency and project next payment
@@ -821,12 +806,74 @@ app.MapGet("/api/dividend-calendar", async (Trading212Client client) =>
     });
 });
 
+app.MapGet("/api/earnings-calendar", async (Trading212Client client) =>
+{
+    if (!finnhubAvailable)
+        return Results.Json(new { items = Array.Empty<object>(), count = 0 });
+
+    var summary = GetCachedSummary();
+    var typeMap = await GetCachedTypeMap(client);
+
+    // Only fetch earnings for stocks (not ETFs)
+    var stockPositions = summary.Positions
+        .Where(p => !typeMap.TryGetValue(p.Instrument.Ticker, out var t) || t != "ETF")
+        .Select(p => new
+        {
+            t212 = p.Instrument.Ticker,
+            symbol = ToStandardSymbol(p.Instrument.Ticker, p.Instrument.Currency),
+            name = p.Instrument.Name
+        })
+        .ToList();
+
+    using var httpClient = new HttpClient();
+    httpClient.DefaultRequestHeaders.Add("User-Agent", "Mozilla/5.0 (compatible; T212Dashboard/1.0)");
+    httpClient.Timeout = TimeSpan.FromSeconds(10);
+
+    var results = new List<object>();
+    var now = DateTimeOffset.UtcNow;
+
+    foreach (var stock in stockPositions)
+    {
+        // Check LiteDB cache first
+        var cachedEvents = cache.GetEarningsIfFresh(stock.symbol);
+        if (cachedEvents is not null)
+        {
+            var item = BuildEarningsItem(stock.t212, stock.symbol, stock.name, cachedEvents, now);
+            if (item is not null) results.Add(item);
+            continue;
+        }
+
+        // Fetch from Finnhub
+        try
+        {
+            var url = $"https://finnhub.io/api/v1/stock/earnings?symbol={stock.symbol}&token={finnhubKey}";
+            var json = await httpClient.GetStringAsync(url);
+            var events = JsonSerializer.Deserialize<List<EarningsEventData>>(json,
+                new JsonSerializerOptions { PropertyNameCaseInsensitive = true }) ?? [];
+
+            cache.UpsertEarnings(stock.symbol, events);
+
+            var item = BuildEarningsItem(stock.t212, stock.symbol, stock.name, events, now);
+            if (item is not null) results.Add(item);
+        }
+        catch { /* skip individual failures */ }
+    }
+
+    var sorted = results
+        .OrderBy(r => ((dynamic)r).daysUntilEarnings ?? int.MaxValue)
+        .ToList();
+
+    return Results.Json(new { items = sorted, count = sorted.Count });
+});
+
 app.MapGet("/api/config", () =>
 {
     var config = AlertConfigLoader.Load();
     return Results.Json(new
     {
         environment = envLabel,
+        accountId = accountInfo.Id,
+        currencyCode = accountInfo.CurrencyCode,
         thresholds = new
         {
             market = config.Market,
@@ -839,39 +886,22 @@ app.MapGet("/api/config", () =>
 
 app.MapGet("/api/benchmark", async () =>
 {
-    // 1. Load portfolio snapshots
+    // 1. Load portfolio snapshots from LiteDB
     var portfolioPoints = new List<object>();
     var portfolioDates = new HashSet<string>();
+    var snapshots = cache.GetSnapshots();
 
-    if (File.Exists(snapshotPath))
+    if (snapshots.Count > 0)
     {
-        var snapshotJson = await File.ReadAllTextAsync(snapshotPath);
-        using var snapshotDoc = JsonDocument.Parse(snapshotJson);
-        var snapshotArray = snapshotDoc.RootElement;
-
-        if (snapshotArray.GetArrayLength() > 0)
+        var firstValue = snapshots[0].TotalValue;
+        foreach (var snap in snapshots)
         {
-            decimal firstValue = 0;
-            foreach (var snap in snapshotArray.EnumerateArray())
-            {
-                var date = snap.GetProperty("date").GetString() ?? "";
-                decimal totalValue = 0;
-                if (snap.TryGetProperty("totalValue", out var tv))
-                {
-                    if (tv.ValueKind == JsonValueKind.Number)
-                        totalValue = tv.GetDecimal();
-                    else if (decimal.TryParse(tv.GetRawText(), out var parsed))
-                        totalValue = parsed;
-                }
+            var pctReturn = firstValue != 0
+                ? Math.Round((snap.TotalValue - firstValue) / firstValue * 100, 2)
+                : 0m;
 
-                if (firstValue == 0) firstValue = totalValue;
-                var pctReturn = firstValue != 0
-                    ? Math.Round((totalValue - firstValue) / firstValue * 100, 2)
-                    : 0m;
-
-                portfolioDates.Add(date);
-                portfolioPoints.Add(new { date, value = pctReturn });
-            }
+            portfolioDates.Add(snap.Id);
+            portfolioPoints.Add(new { date = snap.Id, value = pctReturn });
         }
     }
 
@@ -955,3 +985,70 @@ static string StripHtml(string html)
     if (string.IsNullOrWhiteSpace(html)) return "";
     return Regex.Replace(html, "<[^>]+>", "").Trim();
 }
+
+static string ToStandardSymbol(string t212Ticker, string currency)
+{
+    // Finnhub uses plain symbols for US stocks, SYMBOL.L for LSE, etc.
+    var parts = t212Ticker.Split('_');
+    var symbol = parts[0];
+    if (parts.Length >= 3)
+    {
+        return parts[1] switch
+        {
+            "US" => symbol,
+            "L" => symbol + ".L",
+            "DE" => symbol + ".DE",
+            "PA" => symbol + ".PA",
+            "MI" => symbol + ".MI",
+            "AS" => symbol + ".AS",
+            _ => symbol
+        };
+    }
+    return currency switch
+    {
+        "GBX" or "GBP" => symbol + ".L",
+        _ => symbol
+    };
+}
+
+static object? BuildEarningsItem(string t212Ticker, string symbol, string name,
+    List<EarningsEventData> events, DateTimeOffset now)
+{
+    if (events.Count == 0) return null;
+
+    // Finnhub returns historical earnings sorted by period — find latest and next
+    var sorted = events.OrderByDescending(e => e.Period).ToList();
+    var last = sorted.FirstOrDefault(e => e.Actual is not null);
+
+    // Estimate next earnings: last period + ~90 days (quarterly)
+    string? nextEarningsDate = null;
+    int? daysUntil = null;
+    if (last?.Period is not null && DateTimeOffset.TryParse(last.Period, out var lastPeriod))
+    {
+        var nextEstimate = lastPeriod.AddDays(90);
+        if (nextEstimate < now) nextEstimate = lastPeriod.AddDays(180); // skip if already past
+        nextEarningsDate = nextEstimate.ToString("yyyy-MM-dd");
+        daysUntil = (int)(nextEstimate - now).TotalDays;
+    }
+
+    return new
+    {
+        ticker = t212Ticker,
+        symbol,
+        name,
+        nextEarningsDate,
+        daysUntilEarnings = daysUntil,
+        nextEpsEstimate = last?.Estimate,
+        nextRevenueEstimate = (decimal?)null,
+        lastEarningsDate = last?.Period,
+        lastEps = last?.Actual,
+        lastEpsEstimate = last?.Estimate,
+        lastRevenue = (decimal?)null,
+        lastRevenueEstimate = (decimal?)null,
+        epsSurprise = last?.Surprise,
+        epsBeat = last?.Actual is not null && last?.Estimate is not null
+            ? last.Actual > last.Estimate
+            : (bool?)null
+    };
+}
+
